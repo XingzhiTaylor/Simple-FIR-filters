@@ -2,6 +2,7 @@
 #include<iostream>
 #include<fstream>
 #include<math.h>
+#include<string>
 
 double sinc(double x){
 	if(x == 0) return 1;
@@ -9,83 +10,112 @@ double sinc(double x){
 }
 
 int main(){
-	int kernel_length;
-	std::cin >> kernel_length;
-
-	if(kernel_length%2 != 1){
-		std::cerr << "The kernel length should be an odd number!" << std::endl;
-		return -1;
-	}
-
-	//The kernel length should be odd
-
+	std::string name = " ";
+	std::cout << "Please enter the desired window name: ";
+	getline(std::cin,name);
 	double Wc;
+	std::cout << "Please enter the desired cut-off frequency: ";
 	std::cin >> Wc;
+	double trans_width;
+	std::cout << "Please enter the desired width of the transition band: ";
+	std::cin >> trans_width;
+	trans_width *= M_PI;
 	int data_length;
+	std::cout << "Please enter the length of the raw signal: ";
 	std::cin >> data_length;
-	
-	std::cout << "What window do you need? " << std::endl;
-	std::cout << "1 for Rectangular window " << std::endl;
-	std::cout << "2 for Hanning window " << std::endl;
-	std::cout << "3 for Hamming window " << std::endl;
-	std::cout << "4 for Gaussian window " << std::endl;
-	std::cout << "5 for Blackman window " << std::endl;
-	
-	int filter_type;
-	std::cin >> filter_type;
 
 	//Tell the program the date length and the window size
 
+	std::ifstream infile("signal.txt");
+	int i = 0;
 	double test_data[data_length];
-	double* kernel = new double[kernel_length];
+	while(!infile.eof() && i < data_length){
+		infile >> test_data[i];
+		i++;
+	}
 
 	//Dynamically allocate an array for the input
 
-	int boundary = (kernel_length-1)/2;
+	double x,window,filter;
+	int kernel_length,boundary;
+	double* kernel;
 
-	for(int i = 0; i < kernel_length; i++){
-		//To be modified
-		double x = i - (double)boundary;
-		double window;
-		switch (filter_type){
-			case 1 : window = 0.5 + 0.5 * cos(2*M_PI*x/(kernel_length-1));
-			case 2 : window = 0.54 + 0.46 * cos(2*M_PI*x/(kernel_length-1));
-			case 3 : window = exp(-pow(x/stdev,2)/2);
-			case 4 : window = 0.42 + 0.5 * cos(2*M_PI*x/(kernel_length-1)) + 0.08 * cos(4*M_PI*x/(kernel_length-1));
+	if(name == "hanning"){
+		kernel_length = int(6.65*M_PI/trans_width);
+		if(kernel_length % 2 == 0) kernel_length++;
+		boundary = (kernel_length-1)/2;
+
+		kernel = new double[kernel_length];
+
+		for(int i = 0; i < kernel_length; i++){
+			x = i - double(boundary);
+			window = 0.5 + 0.5 * cos(2*M_PI*x/(kernel_length-1));
+			filter = sinc(x*Wc)*Wc;
+			kernel[i] = window*filter;
 		}	
-    	double sinc_kernel = sinc(x*Wc)*Wc;
-    	kernel[i] = hamming*sinc_kernel;
+
+	}else if(name == "hamming"){
+		kernel_length = int(6.22*M_PI/trans_width);
+		if(kernel_length % 2 == 0) kernel_length++;
+		boundary = (kernel_length-1)/2;
+
+		kernel = new double[kernel_length];
+
+		for(int i = 0; i < kernel_length; i++){
+			x = i - double(boundary);
+			window = 0.54 + 0.46 * cos(2*M_PI*x/(kernel_length-1));
+			filter = sinc(x*Wc)*Wc;
+			kernel[i] = window*filter;
+		}
+
+	}else if(name == "gaussian"){
+		kernel_length = int(8.52*M_PI/trans_width);
+		if(kernel_length % 2 == 0) kernel_length++;
+		boundary = (kernel_length-1)/2;
+		
+		kernel = new double[kernel_length];
+
+		for(int i = 0; i < kernel_length; i++){
+			x = i - double(boundary);
+			window = exp(-pow(x/(((double)kernel_length-1)/5),2)/2);
+			filter = sinc(x*Wc)*Wc;
+			kernel[i] = window*filter;
+		}
+
+	}else if(name == "blackman"){
+		kernel_length = int(11.1*M_PI/trans_width);
+		if(kernel_length % 2 == 0) kernel_length++;
+		boundary = (kernel_length-1)/2;
+		
+		kernel = new double[kernel_length];
+
+		for(int i = 0; i < kernel_length; i++){
+			x = i - double(boundary);
+			window = window = 0.42 + 0.5 * cos(2*M_PI*x/(kernel_length-1)) + 0.08 * cos(4*M_PI*x/(kernel_length-1));
+			filter = sinc(x*Wc)*Wc;
+			kernel[i] = window*filter;
+		}
+			
+	}else{
+		std::cerr << "Invalid window name" << std::endl;
+		return -1;
 	}
 
 	//Calculate the kernel
 
-	for(int i = 0; i < data_length; i++){
-		std::cin >> test_data[i];
-	}
-
-	//Input data
-
-	double* extended_data = new double[data_length+2*(kernel_length-1)];
-	for(int i = 0; i < kernel_length-1; i++){
-		extended_data[i] = 0.0;
-	}
-	for(int i = kernel_length-1; i < kernel_length -1 + data_length; i++){
-		extended_data[i] = test_data[i - kernel_length + 1];
-	}
-	for(int i = kernel_length - 1 + data_length; i < data_length+2*(kernel_length-1); i++){
-		extended_data[i] = 0.0;
-	}
-
-	//Pad zeros to both ends of the array for convolution
-
-	double* filtered = new double[data_length+kernel_length-1];
-	for(int i = 0; i < data_length+kernel_length-1; i++){
-		double conv = 0.0;
-		for(int j = 0; j < kernel_length; j++){
-			conv += extended_data[j+i] * kernel[j];
-		}
-		filtered[i] = conv;
-	}
+    double filtered[data_length+kernel_length-1];
+    for(int i = 0; i < data_length+kernel_length-1; i++){
+    	filtered[i] = 0;
+        for(int j = 0; j < kernel_length; j++){
+            if(i - j < 0){
+                filtered[i] += 0;
+            }else if(i - j >= data_length){
+                filtered[i] += 0;
+            }else{
+                filtered[i] += kernel[j] * test_data[i - j];
+            }
+        }
+    }
 
 	//Convolve the kernel and the data
 
@@ -103,7 +133,7 @@ int main(){
         	 myfile << std::fixed << filtered_data[i] << std::endl;
         }
         myfile.close();
-    }   
+    }
 
     //Output the filtered data into a txt file. Ths is unnecessary in real practice
 
