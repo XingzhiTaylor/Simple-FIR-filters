@@ -26,7 +26,7 @@ int main(){
 
 	//Tell the program the date length and the window size
 
-	std::ifstream infile("signal.txt");
+	std::ifstream infile("input.txt");
 	int i = 0;
 	double test_data[data_length];
 	while(!infile.eof() && i < data_length){
@@ -34,7 +34,7 @@ int main(){
 		i++;
 	}
 
-	//Dynamically allocate an array for the input
+	//Read the signal from a file called "input.txt"
 
 	double x,window,filter;
 	int kernel_length,boundary;
@@ -126,16 +126,16 @@ int main(){
 
 	//We take only the middle part of the convolution output
 
-	std::ofstream myfile ("/Users/xingzhizhang/Documents/MATLAB/SKA project Perth/output.txt");
+	std::ofstream outfile ("output.txt");
 
-    if (myfile.is_open()){
+    if (outfile.is_open()){
         for(int i = 0; i < data_length; i++){
-        	 myfile << std::fixed << filtered_data[i] << std::endl;
+        	 outfile << std::fixed << filtered_data[i] << std::endl;
         }
-        myfile.close();
+        outfile.close();
     }
 
-    //Output the filtered data into a txt file. Ths is unnecessary in real practice
+    //Output the filtered data into a txt file.
 
 	return 0;
 }
